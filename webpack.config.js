@@ -24,13 +24,16 @@ let postCss = require('autoprefixer')({
     ]
 });
 
+// css-loader合并处理css文件，需要在module下配置规则
 // css压缩
 let optimizeCss = require('optimize-css-assets-webpack-plugin');
 
 // js压缩
 let uglifyjsPlugin = require('uglifyjs-webpack-plugin');
+const { loader } = require('mini-css-extract-plugin');
 
-
+// url-loader图片等资源处理，需要在module下配置规则
+// es6转es5配置规则
 
 module.exports = {
     mode:'production', // 模式 development/production
@@ -102,7 +105,7 @@ module.exports = {
     ],
     module:{
         rules:[ //非js规则配置
-            {
+            { //css处理
                 test:/\.css$/, //找.css这个文件
                 use:[
                     minCssExtractPlugin.loader, //将css文件都放到static/css/main.css中
@@ -121,12 +124,45 @@ module.exports = {
                         }
                     }
                 ]
+            },
+            {//图片资源等处理
+                test:/\.(png|jpg|gif|jpeg)$/,
+                use:[
+                    {
+                        loader:'url-loader', //file-loader加载图片，url-loader图片小于多少k用base64
+                        options:{
+                            limit:100*1024, //小于100k用base64
+                            esModule:false,
+                            outputPath:'static/images', //build之后的目录分类
+                            generator: (content) => svgToMiniDataURI(content.toString())
+                        }
+                    }
+                ]
+            },
+            {//es6转es5配置
+                test:/\.(js|jsx)$/, //支持js,jsx文件
+                use:[
+                    {
+                        loader:'babel-loader',
+                        options:{
+                            presets:['@babel/preset-env'],
+                            plugins:['@babel/plugin-proposal-class-properties','@babel/plugin-transform-runtime']
+                        },
+                    }
+                ],
+                include:path.resolve(__dirname,'src'), //需要转换的文件夹
+                exclude:/node_modules/ //排除转换的文件
             }
         ]
     },
    optimization:{ // 优化项启动后mode模式代码压缩,不在生效，必须配置js压缩插件
         minimizer:[
-            new optimizeCss() //css优化
+            new optimizeCss(), //css优化
+            new uglifyjsPlugin({ // js优化
+                cache:true, // 是否缓存
+                parallel:true, //是否并发打包
+                sourceMap:true //es6映射es5需要用
+            })
         ]
     } 
 }

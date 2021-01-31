@@ -5,3 +5,7 @@
     background-color: red;
     transform: rotate(60deg);
 }
+.img{
+    width: 100px;
+    height: 100px;
+}
